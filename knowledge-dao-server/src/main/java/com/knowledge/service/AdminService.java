@@ -2,6 +2,7 @@ package com.knowledge.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.knowledge.common.exception.BusinessException;
+import com.knowledge.common.vo.HotQueryVO;
 import com.knowledge.controller.dto.*;
 import com.knowledge.entity.AdminOperationLogEntity;
 import com.knowledge.entity.ChatMessageEntity;
@@ -148,10 +149,10 @@ public class AdminService {
     }
 
     public List<Map<String, Object>> getHotQueries() {
-        List<ChatMessageMapper.QueryCount> hot = chatMessageMapper.findHotQueries(20);
+        List<HotQueryVO> hot = chatMessageMapper.findHotQueries(20);
         return hot.stream().map(h -> {
             Map<String, Object> row = new LinkedHashMap<>();
-            row.put("query", h.getContent());
+            row.put("query", h.getQuery());
             row.put("count", h.getCnt());
             return row;
         }).toList();
@@ -191,29 +192,29 @@ public class AdminService {
     }
 
     public Map<String, Object> listSessions(Long userId, int page, int pageSize) {
-        StringBuilder wc = new StringBuilder("1=1");
-        List<Object> params = new ArrayList<>();
+        Object[] params;
+        String whereSql;
         if (userId != null) {
-            wc.append(" AND cm.user_id = ?");
-            params.add(userId.toString());
+            whereSql = "WHERE cm.user_id = ?";
+            params = new Object[]{userId.toString()};
+        } else {
+            whereSql = "WHERE 1=1";
+            params = new Object[]{};
         }
-        String cntSql = "SELECT COUNT(DISTINCT cm.session_key) FROM chat_messages cm WHERE " + wc;
-        long total = jdbcTemplate.queryForObject(cntSql, Long.class);
+        String cntSql = "SELECT COUNT(DISTINCT cm.session_key) FROM chat_messages cm " + whereSql;
+        Long totalObj = jdbcTemplate.queryForObject(cntSql, Long.class, params);
+        long total = totalObj != null ? totalObj : 0L;
 
-        String sql = """
-            SELECT cm.session_key, cm.user_id,
-                   COUNT(cm.id) AS message_count,
-                   MIN(cm.content) AS first_message,
-                   MAX(cm.content) AS last_message
-            FROM chat_messages cm
-            WHERE """ + wc + " " + """
-            GROUP BY cm.session_key, cm.user_id
-            ORDER BY MAX(cm.created_at) DESC
-            LIMIT ? OFFSET ?
-            """;
-        params.add(pageSize);
-        params.add((page - 1) * pageSize);
-        List<Map<String, Object>> sessions = jdbcTemplate.queryForList(sql, params.toArray());
+        String sql = "SELECT cm.session_key, cm.user_id, COUNT(cm.id) AS message_count, "
+                   + "MIN(cm.content) AS first_message, MAX(cm.content) AS last_message "
+                   + "FROM chat_messages cm " + whereSql
+                   + " GROUP BY cm.session_key, cm.user_id"
+                   + " ORDER BY MAX(cm.created_at) DESC LIMIT ? OFFSET ?";
+        Object[] allParams = new Object[params.length + 2];
+        System.arraycopy(params, 0, allParams, 0, params.length);
+        allParams[params.length] = pageSize;
+        allParams[params.length + 1] = (page - 1) * pageSize;
+        List<Map<String, Object>> sessions = jdbcTemplate.queryForList(sql, allParams);
         sessions.forEach(s -> {
             String fm = (String) s.get("first_message");
             s.put("firstMessage", fm != null && fm.length() > 100 ? fm.substring(0, 100) + "..." : fm);

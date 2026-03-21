@@ -1,6 +1,7 @@
 package com.knowledge.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.knowledge.common.vo.ContentTypeCountVO;
 import com.knowledge.entity.KnowledgeEntryEntity;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -13,7 +14,6 @@ public interface KnowledgeEntryMapper extends BaseMapper<KnowledgeEntryEntity> {
 
     /**
      * Vector similarity search (cosine distance via pgvector).
-     * Results sorted by distance (ascending = most similar).
      */
     @Select("""
         SELECT id, title, content, content_type, tags, source,
@@ -28,26 +28,12 @@ public interface KnowledgeEntryMapper extends BaseMapper<KnowledgeEntryEntity> {
                                               @Param("userId") Long userId,
                                               @Param("topK") int topK);
 
-    /**
-     * Update embedding vector for a given entry.
-     */
     @Select("UPDATE knowledge_base SET embedding = #{vector}::vector, updated_at = NOW() WHERE id = #{id}")
     void updateEmbedding(@Param("id") Long id, @Param("vector") String vector);
 
-    /**
-     * Count entries by user.
-     */
     @Select("SELECT COUNT(*) FROM knowledge_base WHERE user_id = #{userId}::text")
     long countByUserId(@Param("userId") Long userId);
 
-    /**
-     * Count by content type for a user.
-     */
     @Select("SELECT content_type, COUNT(*) FROM knowledge_base WHERE user_id = #{userId}::text GROUP BY content_type")
-    List<ContentTypeCount> countGroupByContentType(@Param("userId") Long userId);
-
-    interface ContentTypeCount {
-        String getContentType();
-        Long getCount();
-    }
+    List<ContentTypeCountVO> countGroupByContentType(@Param("userId") Long userId);
 }

@@ -1,6 +1,7 @@
 package com.knowledge.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.knowledge.common.vo.HotQueryVO;
 import com.knowledge.entity.ChatMessageEntity;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -17,11 +18,6 @@ public interface ChatMessageMapper extends BaseMapper<ChatMessageEntity> {
     @Select("SELECT * FROM chat_messages WHERE role = 'user' ORDER BY created_at DESC LIMIT #{limit}")
     List<ChatMessageEntity> findAllQueries(@Param("limit") int limit);
 
-    @Select("SELECT content, COUNT(*) AS cnt FROM chat_messages WHERE role = 'user' GROUP BY content ORDER BY cnt DESC LIMIT #{limit}")
-    List<QueryCount> findHotQueries(@Param("limit") int limit);
-
-    interface QueryCount {
-        String getContent();
-        Long getCnt();
-    }
+    @Select("SELECT content AS query, COUNT(*) AS cnt FROM chat_messages WHERE role = 'user' GROUP BY content ORDER BY cnt DESC LIMIT #{limit}")
+    List<HotQueryVO> findHotQueries(@Param("limit") int limit);
 }

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.knowledge.common.exception.BusinessException;
 import com.knowledge.common.exception.ResourceNotFoundException;
+import com.knowledge.common.vo.ContentTypeCountVO;
 import com.knowledge.controller.dto.*;
 import com.knowledge.entity.KnowledgeEntryEntity;
 import com.knowledge.mapper.KnowledgeEntryMapper;
