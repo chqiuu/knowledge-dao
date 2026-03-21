@@ -1,0 +1,1033 @@
+openapi: 3.0.3
+info:
+  title: Knowledge DAO API
+  description: |
+    本地 RAG 知识库 API，支持：
+    - **RAG 核心**：语义检索、知识插入、RAG 问答
+    - **管理后台**：知识管理、用户会话、系统监控、配置管理
+    - **仪表盘**：驾驶舱统计数据
+    - **检索分析**：搜索历史、热词统计
+
+    基础路径：
+    - ApiServer（用户 API）：`http://localhost:8080`
+    - AdminApiServer（管理 API）：`http://localhost:8081`
+  version: "1.0.0"
+  contact:
+    name: knowledge-dao team
+  license:
+    name: MIT
+    url: https://github.com/chqiuu/knowledge-dao
+
+servers:
+  - url: http://localhost:8080
+    description: 用户 API（ApiServer）
+  - url: http://localhost:8081
+    description: 管理后台 API（AdminApiServer）
+
+tags:
+  - name: RAG-检索
+    description: 知识库语义检索与 RAG 问答
+  - name: 管理后台-知识管理
+    description: 知识条目增删改查、批量导入
+  - name: 管理后台-系统
+    description: 系统统计、健康检查、API 指标
+  - name: 管理后台-搜索分析
+    description: 搜索历史与统计
+  - name: 管理后台-用户会话
+    description: 用户列表、会话列表、消息历史
+  - name: 管理后台-操作日志
+    description: 操作日志查询
+  - name: 仪表盘
+    description: 驾驶舱统计数据
+  - name: 知识库-用户
+    description: 用户级知识 CRUD
+  - name: 检索分析
+    description: 检索历史、热词
+  - name: 系统监控
+    description: Ollama、数据库状态监控
+  - name: 配置中心
+    description: 向量配置、RAG 配置
+
+paths:
+  /health:
+    get:
+      operationId: health-check
+      summary: 健康检查
+      tags: [RAG-检索]
+      responses:
+        "200":
+          description: 服务健康
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+              example:
+                code: 1
+                message: "success"
+                data: "OK"
+                time: 1742544000000
+
+  /api/rag/insert:
+    post:
+      operationId: rag-insert
+      summary: 插入知识条目
+      description: 新增一条知识条目，自动生成向量并存入 pgvector
+      tags: [RAG-检索]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InsertRequest"
+            example:
+              title: "Java 并发编程"
+              content: "Java 提供了多种并发机制..."
+              contentType: "article"
+              tags: ["java", "concurrency"]
+              source: "blog"
+              userId: 1
+      responses:
+        "201":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "400":
+          description: 参数校验失败
+
+  /api/rag/search:
+    post:
+      operationId: rag-search
+      summary: 语义搜索
+      description: 基于向量相似度的语义搜索，使用 bge-m3 模型生成 1024 维向量
+      tags: [RAG-检索]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchRequest"
+            example:
+              query: "Java 多线程有哪些实现方式"
+              userId: 1
+              topK: 5
+      responses:
+        "200":
+          description: 搜索成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
+  /api/rag/chat:
+    post:
+      operationId: rag-chat
+      summary: RAG 对话
+      description: 基于 RAG 的对话接口，返回检索结果和构建的上下文字符串（不含 LLM 调用）
+      tags: [RAG-检索]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+            example:
+              query: "Java 多线程有哪些实现方式？"
+              userId: 1
+              topK: 5
+              sessionKey: "sess-20260322-001"
+      responses:
+        "200":
+          description: 对话完成
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
+  /api/rag/stats:
+    get:
+      operationId: rag-stats
+      summary: 用户知识统计
+      tags: [RAG-检索]
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+          example: 1
+      responses:
+        "200":
+          description: 统计成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
+  /api/admin/health:
+    get:
+      operationId: admin-health
+      summary: 管理后台健康检查
+      tags: [管理后台-系统]
+      responses:
+        "200":
+          description: 服务健康，数据库连接正常
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+        "503":
+          description: 数据库连接失败
+
+  /api/admin/stats:
+    get:
+      operationId: admin-stats
+      summary: 系统统计概览
+      tags: [管理后台-系统]
+      responses:
+        "200":
+          description: 统计成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStatsResponse"
+
+  /api/admin/metrics:
+    get:
+      operationId: admin-metrics
+      summary: API 指标
+      description: 返回各端点的调用次数、错误次数、平均响应时间、P99 延迟
+      tags: [管理后台-系统]
+      responses:
+        "200":
+          description: 指标数据
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
+  /api/admin/entries:
+    get:
+      operationId: admin-entries-list
+      summary: 知识条目列表（分页）
+      tags: [管理后台-知识管理]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: tag
+          in: query
+          schema:
+            type: string
+        - name: keyword
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: userId
+          in: query
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: 列表成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+    post:
+      operationId: admin-entries-create
+      summary: 创建知识条目
+      tags: [管理后台-知识管理]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InsertRequest"
+      responses:
+        "201":
+          description: 创建成功
+        "400":
+          description: 参数校验失败
+
+  /api/admin/entries/{id}:
+    get:
+      operationId: admin-entries-get
+      summary: 知识条目详情
+      tags: [管理后台-知识管理]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: 成功
+        "404":
+          description: 条目不存在
+    put:
+      operationId: admin-entries-update
+      summary: 更新知识条目
+      tags: [管理后台-知识管理]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InsertRequest"
+      responses:
+        "200":
+          description: 更新成功
+        "404":
+          description: 条目不存在
+    delete:
+      operationId: admin-entries-delete
+      summary: 删除知识条目
+      tags: [管理后台-知识管理]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: userId
+          in: query
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: 删除成功
+        "404":
+          description: 条目不存在
+
+  /api/admin/entries/batch:
+    post:
+      operationId: admin-entries-batch
+      summary: 批量导入知识
+      tags: [管理后台-知识管理]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchImportRequest"
+      responses:
+        "200":
+          description: 导入完成
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponse"
+
+  /api/admin/entries/{id}/rebuild:
+    post:
+      operationId: admin-entries-rebuild
+      summary: 重建向量
+      description: 重新生成指定知识条目的向量
+      tags: [管理后台-知识管理]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: userId
+          in: query
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: 重建成功
+        "404":
+          description: 条目不存在
+
+  /api/admin/searches:
+    get:
+      operationId: admin-searches-list
+      summary: 搜索历史列表
+      tags: [管理后台-搜索分析]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: userId
+          in: query
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: 成功
+
+  /api/admin/searches/stats:
+    get:
+      operationId: admin-searches-stats
+      summary: 搜索统计
+      tags: [管理后台-搜索分析]
+      responses:
+        "200":
+          description: 成功
+
+  /api/admin/users:
+    get:
+      operationId: admin-users-list
+      summary: 用户列表
+      tags: [管理后台-用户会话]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: 成功
+
+  /api/admin/sessions:
+    get:
+      operationId: admin-sessions-list
+      summary: 会话列表
+      tags: [管理后台-用户会话]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: userId
+          in: query
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: 成功
+
+  /api/admin/sessions/{sessionKey}/messages:
+    get:
+      operationId: admin-session-messages
+      summary: 会话消息历史
+      tags: [管理后台-用户会话]
+      parameters:
+        - name: sessionKey
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+      responses:
+        "200":
+          description: 成功
+
+  /api/admin/logs:
+    get:
+      operationId: admin-logs-list
+      summary: 操作日志列表
+      tags: [管理后台-操作日志]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: resource
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 成功
+
+  /api/dashboard/stats:
+    get:
+      operationId: dashboard-stats
+      summary: 仪表盘统计
+      tags: [仪表盘]
+      responses:
+        "200":
+          description: 成功
+
+  /api/dashboard/vector-status:
+    get:
+      operationId: dashboard-vector-status
+      summary: 向量状态
+      tags: [仪表盘]
+      responses:
+        "200":
+          description: 成功
+
+  /api/dashboard/activities:
+    get:
+      operationId: dashboard-activities
+      summary: 最新动态
+      tags: [仪表盘]
+      responses:
+        "200":
+          description: 成功
+
+  /api/dashboard/alerts:
+    get:
+      operationId: dashboard-alerts
+      summary: 告警信息
+      tags: [仪表盘]
+      responses:
+        "200":
+          description: 成功
+
+  /api/knowledge:
+    get:
+      operationId: knowledge-list
+      summary: 知识列表（用户级）
+      tags: [知识库-用户]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: tag
+          in: query
+          schema:
+            type: string
+        - name: keyword
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: userId
+          in: query
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: 成功
+    post:
+      operationId: knowledge-create
+      summary: 创建知识条目
+      tags: [知识库-用户]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InsertRequest"
+      responses:
+        "201":
+          description: 创建成功
+    put:
+      operationId: knowledge-update
+      summary: 更新知识条目
+      tags: [知识库-用户]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InsertRequest"
+      responses:
+        "200":
+          description: 更新成功
+    delete:
+      operationId: knowledge-delete
+      summary: 批量删除知识条目
+      tags: [知识库-用户]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: integer
+                    format: int64
+      responses:
+        "200":
+          description: 删除成功
+
+  /api/knowledge/{id}:
+    get:
+      operationId: knowledge-get
+      summary: 知识条目详情
+      tags: [知识库-用户]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: 成功
+        "404":
+          description: 条目不存在
+
+  /api/knowledge/tags:
+    get:
+      operationId: knowledge-tags
+      summary: 标签列表
+      tags: [知识库-用户]
+      responses:
+        "200":
+          description: 成功
+
+  /api/knowledge/batch-recalc-vector:
+    post:
+      operationId: knowledge-batch-recalc
+      summary: 批量重建向量
+      tags: [知识库-用户]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: integer
+                    format: int64
+      responses:
+        "200":
+          description: 成功
+
+  /api/knowledge/batch-import:
+    post:
+      operationId: knowledge-batch-import
+      summary: 批量导入
+      tags: [知识库-用户]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchImportRequest"
+      responses:
+        "200":
+          description: 导入完成
+
+  /api/retrieval/search:
+    post:
+      operationId: retrieval-search
+      summary: 检索搜索
+      tags: [检索分析]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+                - userId
+              properties:
+                query:
+                  type: string
+                userId:
+                  type: integer
+                  format: int64
+                  minimum: 1
+                topK:
+                  type: integer
+                  default: 5
+                  maximum: 100
+      responses:
+        "200":
+          description: 成功
+
+  /api/retrieval/history:
+    get:
+      operationId: retrieval-history
+      summary: 搜索历史
+      tags: [检索分析]
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+      responses:
+        "200":
+          description: 成功
+
+  /api/retrieval/hot-queries:
+    get:
+      operationId: retrieval-hot-queries
+      summary: 热门搜索词
+      tags: [检索分析]
+      responses:
+        "200":
+          description: 成功
+
+  /api/retrieval/test:
+    get:
+      operationId: retrieval-test
+      summary: 检索测试
+      tags: [检索分析]
+      responses:
+        "200":
+          description: 成功
+
+  /api/monitor/api-metrics:
+    get:
+      operationId: monitor-api-metrics
+      summary: API 调用统计
+      tags: [系统监控]
+      responses:
+        "200":
+          description: 成功
+
+  /api/monitor/ollama-status:
+    get:
+      operationId: monitor-ollama-status
+      summary: Ollama 服务状态
+      tags: [系统监控]
+      responses:
+        "200":
+          description: 成功
+
+  /api/monitor/database-status:
+    get:
+      operationId: monitor-database-status
+      summary: 数据库状态
+      tags: [系统监控]
+      responses:
+        "200":
+          description: 成功
+
+  /api/config/vector:
+    get:
+      operationId: config-vector-get
+      summary: 获取向量配置
+      tags: [配置中心]
+      responses:
+        "200":
+          description: 成功
+    put:
+      operationId: config-vector-update
+      summary: 更新向量配置
+      tags: [配置中心]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                model:
+                  type: string
+                dimension:
+                  type: integer
+                batchSize:
+                  type: integer
+      responses:
+        "200":
+          description: 更新成功
+
+  /api/config/rag:
+    get:
+      operationId: config-rag-get
+      summary: 获取 RAG 配置
+      tags: [配置中心]
+      responses:
+        "200":
+          description: 成功
+    put:
+      operationId: config-rag-update
+      summary: 更新 RAG 配置
+      tags: [配置中心]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                topK:
+                  type: integer
+                maxContextLength:
+                  type: integer
+      responses:
+        "200":
+          description: 更新成功
+
+components:
+  schemas:
+    ApiResponse:
+      type: object
+      description: 统一响应包装（对齐 kin-tree-cloud Result<T>）
+      properties:
+        code:
+          type: integer
+          description: "状态码：1=成功，其他=失败"
+          example: 1
+        message:
+          type: string
+          description: 状态描述
+          example: "success"
+        data:
+          type: object
+          nullable: true
+          description: 响应数据
+        time:
+          type: integer
+          format: int64
+          description: 服务器时间戳（毫秒）
+          example: 1742544000000
+
+    InsertRequest:
+      type: object
+      required:
+        - title
+        - content
+        - userId
+      properties:
+        title:
+          type: string
+          maxLength: 500
+          description: 标题
+          example: "Java 并发编程"
+        content:
+          type: string
+          description: 正文内容
+        contentType:
+          type: string
+          description: 内容类型
+          default: "article"
+          enum: [article, tutorial, book, note, doc, qa]
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 20
+          description: 标签列表
+          example: ["java", "concurrency"]
+        source:
+          type: string
+          description: 来源标识
+          default: "api"
+        userId:
+          type: integer
+          format: int64
+          minimum: 1
+          description: 所属用户 ID
+
+    SearchRequest:
+      type: object
+      required:
+        - query
+        - userId
+      properties:
+        query:
+          type: string
+          description: 搜索查询文本
+        userId:
+          type: integer
+          format: int64
+          minimum: 1
+        topK:
+          type: integer
+          default: 5
+          minimum: 1
+          maximum: 100
+
+    ChatRequest:
+      type: object
+      required:
+        - query
+        - userId
+      properties:
+        query:
+          type: string
+          description: 用户查询
+        userId:
+          type: integer
+          format: int64
+          minimum: 1
+        topK:
+          type: integer
+          default: 5
+        sessionKey:
+          type: string
+
+    BatchImportRequest:
+      type: object
+      required:
+        - entries
+      properties:
+        entries:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required:
+              - title
+              - content
+              - userId
+            properties:
+              title:
+                type: string
+                maxLength: 500
+              content:
+                type: string
+              contentType:
+                type: string
+                default: "article"
+              tags:
+                type: array
+                items:
+                  type: string
+                maxItems: 20
+              source:
+                type: string
+                default: "import"
+              userId:
+                type: integer
+                format: int64
+                minimum: 1
+
+    AdminStatsResponse:
+      type: object
+      properties:
+        totalEntries:
+          type: integer
+          format: int64
+          description: 知识条目总数
+        totalUsers:
+          type: integer
+          format: int64
+          description: 用户总数
+        totalSessions:
+          type: integer
+          format: int64
+          description: 会话总数
+        totalSearches:
+          type: integer
+          format: int64
+          description: 搜索总次数
+        storageBytes:
+          type: integer
+          format: int64
+          description: 估算存储字节数
+        entriesByType:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+        topTags:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+        sharedEntries:
+          type: integer
+          format: int64
+
+    SearchStatsResponse:
+      type: object
+      properties:
+        totalSearches:
+          type: integer
+          format: int64
+        searchesToday:
+          type: integer
+          format: int64
+        avgHitCount:
+          type: number
+          format: double
+        topQueries:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+        searchesByUser:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
