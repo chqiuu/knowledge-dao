@@ -18,11 +18,8 @@ export const deleteKnowledge = (id) => request.delete(`/entries/${id}`)
 // 重建向量
 export const rebuildVector = (id, userId = 1) => request.post(`/entries/${id}/rebuild?userId=${userId}`)
 
-// 批量重算向量
-export const batchRecalcVector = async (ids) => {
-  const promises = ids.map(id => rebuildVector(id))
-  return Promise.allSettled(promises)
-}
+// 批量重算向量（调用 POST /api/admin/batch-recalc-vector）
+export const batchRecalcVector = (ids) => request.post('/batch-recalc-vector', { ids })
 
 // 批量导入
 export const batchImport = (data) => request.post('/entries/batch', data)

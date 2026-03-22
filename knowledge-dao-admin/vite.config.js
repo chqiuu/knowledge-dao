@@ -14,11 +14,31 @@ export default defineConfig({
     proxy: {
       // Admin API on port 8081
       '/api/admin': {
-        target: 'http://localhost:8081',
+        target: 'http://localhost:8080',
         changeOrigin: true
       },
-      // RAG API on port 8080
+      // RAG API (RagController) on port 8080
       '/api/rag': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
+      },
+      // Dashboard API on port 8080
+      '/api/dashboard': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
+      },
+      // Knowledge API on port 8080
+      '/api/knowledge': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
+      },
+      // Monitor API on port 8080
+      '/api/monitor': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
+      },
+      // Config API on port 8080
+      '/api/config': {
         target: 'http://localhost:8080',
         changeOrigin: true
       }
