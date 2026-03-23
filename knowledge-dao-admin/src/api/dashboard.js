@@ -12,14 +12,14 @@ export const getApiMetrics = () => request.get('/metrics')
 // 搜索统计
 export const getSearchStats = () => request.get('/searches/stats')
 
-// 操作日志（用于活动时间线）
-export const getOperationLogs = (params) => request.get('/logs', { params })
+// 最近活动时间线（对应 DashboardController /activities）
+export const getRecentActivities = () => request.get('/activities')
+
+// 操作日志（备用）
+export const getOperationLogs = (params) => request.get('/activities', { params })
 
 // 健康检查（用于 Dashboard 向量状态）
 export const getVectorStatus = () => request.get('/health')
-
-// 获取最近活动时间线
-export const getRecentActivities = () => getOperationLogs({ page: 1, pageSize: 10 })
 
 // 获取告警信息（从 metrics 中提取错误率）
 export const getAlerts = async () => {

@@ -68,12 +68,12 @@
             <div class="card-header"><span>系统信息</span></div>
           </template>
           <el-descriptions :column="1" border size="small">
-            <el-descriptions-item label="Admin API">http://localhost:8081</el-descriptions-item>
-            <el-descriptions-item label="RAG API">http://localhost:8080</el-descriptions-item>
+            <el-descriptions-item label="Admin API">http://localhost:58088</el-descriptions-item>
+            <el-descriptions-item label="RAG API">http://localhost:58088</el-descriptions-item>
             <el-descriptions-item label="向量模型">bge-m3</el-descriptions-item>
             <el-descriptions-item label="向量维度">1024</el-descriptions-item>
             <el-descriptions-item label="前端端口">5173</el-descriptions-item>
-            <el-descriptions-item label="版本">knowledge-dao v1.0.0</el-descriptions-item>
+            <el-descriptions-item label="版本">knowledge-dao v2.0.0</el-descriptions-item>
           </el-descriptions>
         </el-card>
       </el-col>

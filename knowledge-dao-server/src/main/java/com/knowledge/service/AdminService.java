@@ -91,6 +91,15 @@ public class AdminService {
         }).toList();
     }
 
+    public List<Map<String, Object>> getAlerts() {
+        List<Map<String, Object>> alerts = new ArrayList<>();
+        long generating = count("knowledge_base", "embedding IS NULL");
+        if (generating > 0) {
+            alerts.add(Map.of("level", "warning", "message", generating + " entries missing vector embeddings"));
+        }
+        return alerts;
+    }
+
     // ── Knowledge CRUD ────────────────────────────────────────────────
 
     public Map<String, Object> listEntries(String tag, String keyword, String type, Long userId, int page, int pageSize) {
@@ -227,6 +236,18 @@ public class AdminService {
         result.put("pageSize", pageSize);
         result.put("data", sessions);
         return result;
+    }
+
+    public List<Map<String, Object>> getSessionMessages(String sessionKey) {
+        String sql = "SELECT id, session_key, role, content, created_at FROM chat_messages WHERE session_key = ? ORDER BY created_at ASC";
+        List<Map<String, Object>> messages = jdbcTemplate.queryForList(sql, sessionKey);
+        messages.forEach(m -> {
+            Object createdAt = m.get("created_at");
+            if (createdAt != null) {
+                m.put("createdAt", createdAt.toString());
+            }
+        });
+        return messages;
     }
 
     // ── Monitor ──────────────────────────────────────────────────────

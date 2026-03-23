@@ -93,6 +93,26 @@ public class AdminController {
         return Result.ok(adminService.rebuildEmbedding(id, userId != null ? userId : 1L), "重建成功");
     }
 
+    // ── Dashboard ────────────────────────────────────────────────────
+
+    @GetMapping("/activities")
+    @Operation(summary = "最近活动（时间线）")
+    public Result<?> activities() {
+        return Result.ok(adminService.getRecentActivities());
+    }
+
+    @GetMapping("/vector-status")
+    @Operation(summary = "向量状态")
+    public Result<?> vectorStatus() {
+        return Result.ok(adminService.getVectorStatus());
+    }
+
+    @GetMapping("/alerts")
+    @Operation(summary = "告警信息")
+    public Result<?> alerts() {
+        return Result.ok(adminService.getAlerts());
+    }
+
     // ── Search Analytics ──────────────────────────────────────────────
 
     @GetMapping("/searches")
@@ -119,9 +139,35 @@ public class AdminController {
 
     @GetMapping("/sessions")
     @Operation(summary = "会话列表")
-    public Result<?> listSessions(@RequestParam(required = false) Long userId,
-                                  @RequestParam(defaultValue = "1") int page,
-                                  @RequestParam(defaultValue = "20") int pageSize) {
+    public Result<?> listSessions(
+            @RequestParam(value = "userId", required = false) Long userId,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "pageSize", defaultValue = "20") int pageSize) {
         return Result.ok(adminService.listSessions(userId, page, pageSize));
+    }
+
+    @GetMapping("/sessions/{sessionKey}/messages")
+    @Operation(summary = "会话消息详情")
+    public Result<?> getSessionMessages(@PathVariable String sessionKey) {
+        return Result.ok(adminService.getSessionMessages(sessionKey));
+    }
+
+    // ── Batch Operations ──────────────────────────────────────────────
+
+    @PostMapping("/batch-recalc-vector")
+    @Operation(summary = "批量重建向量")
+    public Result<?> batchRecalcVector(@RequestBody Map<String, List<Long>> body) {
+        List<Long> ids = body.get("ids");
+        if (ids == null || ids.isEmpty()) {
+            return Result.fail(400, "ids不能为空");
+        }
+        int rebuilt = 0;
+        for (Long id : ids) {
+            try {
+                adminService.rebuildEmbedding(id, 1L);
+                rebuilt++;
+            } catch (Exception ignored) {}
+        }
+        return Result.ok(Map.of("rebuilt", rebuilt, "total", ids.size()));
     }
 }
