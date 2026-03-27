@@ -40,7 +40,7 @@ public class RagController {
 
     @GetMapping("/stats")
     @Operation(summary = "用户统计")
-    public Result<?> stats(@RequestParam Long userId) {
+    public Result<?> stats(@RequestParam(name = "userId") Long userId) {
         return Result.ok(knowledgeService.getStats(userId));
     }
 }

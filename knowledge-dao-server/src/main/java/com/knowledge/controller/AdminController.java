@@ -46,12 +46,12 @@ public class AdminController {
     @GetMapping("/entries")
     @Operation(summary = "知识条目列表")
     public Result<?> listEntries(
-            @RequestParam(required = false) String tag,
-            @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String type,
-            @RequestParam(required = false) Long userId,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int pageSize) {
+            @RequestParam(name = "tag", required = false) String tag,
+            @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "type", required = false) String type,
+            @RequestParam(name = "userId", required = false) Long userId,
+            @RequestParam(name = "page", defaultValue = "1") int page,
+            @RequestParam(name = "pageSize", defaultValue = "20") int pageSize) {
         return Result.ok(adminService.listEntries(tag, keyword, type, userId, page, pageSize));
     }
 
@@ -89,7 +89,7 @@ public class AdminController {
 
     @PostMapping("/entries/{id}/rebuild")
     @Operation(summary = "重建向量")
-    public Result<?> rebuildEntry(@PathVariable Long id, @RequestParam(required = false) Long userId) {
+    public Result<?> rebuildEntry(@PathVariable Long id, @RequestParam(name = "userId", required = false) Long userId) {
         return Result.ok(adminService.rebuildEmbedding(id, userId != null ? userId : 1L), "重建成功");
     }
 
@@ -132,8 +132,8 @@ public class AdminController {
 
     @GetMapping("/users")
     @Operation(summary = "用户列表")
-    public Result<?> listUsers(@RequestParam(defaultValue = "1") int page,
-                               @RequestParam(defaultValue = "20") int pageSize) {
+    public Result<?> listUsers(@RequestParam(name = "page", defaultValue = "1") int page,
+                               @RequestParam(name = "pageSize", defaultValue = "20") int pageSize) {
         return Result.ok(adminService.listUsers(page, pageSize));
     }
 

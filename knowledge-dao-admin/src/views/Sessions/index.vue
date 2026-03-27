@@ -114,9 +114,14 @@ const formatTime = (t) => t ? t.replace('T', ' ').slice(0, 19) : ''
 const loadUsers = async () => {
   usersLoading.value = true
   try {
-    // 用户列表通过 sessions 接口获取，暂不分页
     const result = await request.get('/users', { params: { page: 1, pageSize: 100 } })
-    users.value = result?.data || []
+    const list = result?.data || []
+    users.value = list.map(u => ({
+      userId: u.user_id,
+      entryCount: u.entry_count,
+      sessionCount: u.session_count,
+      lastActive: u.last_active,
+    }))
   } catch {
     users.value = []
   } finally {
@@ -130,7 +135,15 @@ const loadSessions = async () => {
     const params = { page: sessionsPage.value, pageSize: sessionsPageSize.value }
     if (filterUserId.value) params.userId = filterUserId.value
     const result = await request.get('/sessions', { params })
-    sessions.value = result?.data || []
+    const list = result?.data || []
+    // API 返回 snake_case，转为 camelCase
+    sessions.value = list.map(s => ({
+      sessionKey: s.session_key,
+      userId: s.user_id,
+      messageCount: s.message_count,
+      firstMessage: s.first_message || s.firstMessage || '',
+      lastMessage: s.last_message || s.lastMessage || '',
+    }))
     sessionsTotal.value = result?.total || 0
     sessionsPage.value = result?.page || 1
   } catch {
@@ -158,7 +171,15 @@ const loadMessages = async (sessionKey) => {
   messages.value = []
   try {
     const result = await request.get(`/sessions/${encodeURIComponent(sessionKey)}/messages`)
-    messages.value = Array.isArray(result) ? result : []
+    const list = Array.isArray(result) ? result : (result?.data || [])
+    // API 返回 snake_case，转为 camelCase
+    messages.value = list.map(m => ({
+      id: m.id,
+      sessionKey: m.session_key,
+      role: m.role,
+      content: m.content,
+      createdAt: m.created_at || m.createdAt,
+    }))
     await nextTick()
     if (chatMessagesRef.value) {
       chatMessagesRef.value.scrollTop = chatMessagesRef.value.scrollHeight

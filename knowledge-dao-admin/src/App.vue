@@ -26,10 +26,6 @@
           <el-icon><Search /></el-icon>
           <template #title>检索中心</template>
         </el-menu-item>
-        <el-menu-item index="/retrieval">
-          <el-icon><Search /></el-icon>
-          <template #title>检索中心</template>
-        </el-menu-item>
         <el-menu-item index="/sessions">
           <el-icon><ChatLineSquare /></el-icon>
           <template #title>用户会话</template>

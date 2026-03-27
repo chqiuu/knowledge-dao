@@ -4,43 +4,51 @@ import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
   plugins: [vue()],
+  base: '/rag/',
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
   },
   server: {
-    port: 5173,
+    allowedHosts: ['blog.chqiuu.com'],
+    port: 56673,
     proxy: {
       // Admin API on port 8081
-      '/api/admin': {
+      '/rag/api/admin': {
         target: 'http://localhost:58088',
-        changeOrigin: true
+        changeOrigin: true,
+        rewrite: (path) => path.replace('/rag', '')
       },
       // RAG API (RagController) on port 8080
-      '/api/rag': {
+      '/rag/api/rag': {
         target: 'http://localhost:58088',
-        changeOrigin: true
+        changeOrigin: true,
+        rewrite: (path) => path.replace('/rag', '')
       },
       // Dashboard API on port 8080
-      '/api/dashboard': {
+      '/rag/api/dashboard': {
         target: 'http://localhost:58088',
-        changeOrigin: true
+        changeOrigin: true,
+        rewrite: (path) => path.replace('/rag', '')
       },
       // Knowledge API on port 8080
-      '/api/knowledge': {
+      '/rag/api/knowledge': {
         target: 'http://localhost:58088',
-        changeOrigin: true
+        changeOrigin: true,
+        rewrite: (path) => path.replace('/rag', '')
       },
       // Monitor API on port 8080
-      '/api/monitor': {
+      '/rag/api/monitor': {
         target: 'http://localhost:58088',
-        changeOrigin: true
+        changeOrigin: true,
+        rewrite: (path) => path.replace('/rag', '')
       },
       // Config API on port 8080
-      '/api/config': {
+      '/rag/api/config': {
         target: 'http://localhost:58088',
-        changeOrigin: true
+        changeOrigin: true,
+        rewrite: (path) => path.replace('/rag', '')
       }
     }
   }
